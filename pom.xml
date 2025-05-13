@@ -1,0 +1,36 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.zzay</groupId>
+    <artifactId>fengxv_weather</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging> <!-- ⚠️ 关键：父模块要指定为 pom 类型 -->
+    <name>fengxv_weather</name>
+    <description>Parent project for fengxv_weather</description>
+
+    <modules>
+        <module>fengxv_web</module>         <!-- 原来的代码移动到 web 子模块 -->
+<!--        <module>hadoop</module>      &lt;!&ndash; 你新建的 hadoop 子模块 &ndash;&gt;-->
+    </modules>
+
+    <properties>
+        <java.version>17</java.version> <!-- 父模块统一 Java 版本，子模块可覆盖 -->
+    </properties>
+
+    <!-- 可放置一些统一依赖版本控制 -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- 可选：在此定义公共依赖版本 -->
+        </dependencies>
+    </dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.3</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+</project>
