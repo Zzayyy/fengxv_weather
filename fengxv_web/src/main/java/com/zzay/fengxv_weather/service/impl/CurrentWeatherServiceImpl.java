@@ -10,10 +10,13 @@ import com.zzay.fengxv_weather.service.ICurrentWeatherService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzay.fengxv_weather.weatherClient.OpenWeatherMapClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.function.Supplier;
 
 /**
  * <p>
@@ -35,25 +38,26 @@ public class CurrentWeatherServiceImpl extends ServiceImpl<CurrentWeatherMapper,
     @Autowired
     private CityMapper cityMapper;
 
+    @Autowired
+    private RedisTemplate<String,String> redisTemplate;
+
     @Override
     public String getCurrentWeatherByCityName(String city) {
-        String currentWeatherByCityName = openWeatherMapClient.getCurrentWeatherByCityName(city);
-        saveWeatherData(currentWeatherByCityName);
-        return currentWeatherByCityName;
+        String cacheKey = "weather:" + city;
+        return getOrFetchWeather(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByCityName(city));
     }
+
 
     @Override
     public String getCurrentWeatherBYCityId(String cityId) {
-        String currentWeatherByCityId = openWeatherMapClient.getCurrentWeatherByCityId(cityId);
-        saveWeatherData(currentWeatherByCityId);
-        return currentWeatherByCityId;
+        String cacheKey = "weather:" + cityId;
+        return getOrFetchWeather(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByCityId(cityId));
     }
 
     @Override
     public String getCurrentWeatherByZIPCode(String zipCode) {
-        String currentWeatherByZIPCode = openWeatherMapClient.getCurrentWeatherByZIPCode(zipCode);
-        saveWeatherData(currentWeatherByZIPCode);
-        return currentWeatherByZIPCode;
+        String cacheKey = "weather" + zipCode;
+        return getOrFetchWeather(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByZIPCode(zipCode));
     }
 
 
@@ -126,4 +130,48 @@ public class CurrentWeatherServiceImpl extends ServiceImpl<CurrentWeatherMapper,
             return false;
         }
     }
+
+
+    public String getOrFetchWeather(String cacheKey, Supplier<String> apiCall) {
+        // 1. 尝试读取缓存
+        String cached = null;
+        try {
+            cached = redisTemplate.opsForValue().get(cacheKey);
+        } catch (Exception e) {
+            // 日志：Redis 读取失败，但不阻止业务继续执行
+            System.err.println("Redis 读取失败：" + e.getMessage());
+        }
+
+        // 2. 如果缓存命中，直接返回
+        if (cached != null) {
+            return cached;
+        }
+
+        // 3. 未命中缓存，调用 API
+        String result;
+        try {
+            result = apiCall.get();
+        } catch (Exception e) {
+            throw new RuntimeException("远程 API 调用失败：" + e.getMessage(), e);
+        }
+
+        // 4. 保存数据到数据库
+        if (!saveWeatherData(result)) {
+            throw new RuntimeException("天气数据保存到数据库失败");
+        }
+
+        // 5. 尝试写入缓存
+        try {
+            redisTemplate.opsForValue().set(cacheKey, result, Duration.ofMinutes(10));
+        } catch (Exception e) {
+            // 日志：Redis 写入失败，但不影响主流程
+            System.err.println("Redis 写入失败：" + e.getMessage());
+        }
+
+        return result;
+    }
+
+
+
+
 }
