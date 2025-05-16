@@ -1,10 +1,13 @@
 package com.zzay.fengxv_weather.controller;
 
 
+import com.zzay.fengxv_weather.domain.dto.CurrentWeatherDTO;
+import com.zzay.fengxv_weather.domain.result.Result;
 import com.zzay.fengxv_weather.service.ICurrentWeatherService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 /**
  * <p>
@@ -20,10 +23,11 @@ public class CurrentWeatherController {
 
     @Autowired
     private ICurrentWeatherService currentWeatherService;
+
     @Operation(summary = "根据城市名获取天气信息")
     @GetMapping("/{city}")
-    public String getWeatherByCity(@PathVariable String city) {
-        return currentWeatherService.getCurrentWeatherByCityName(city);
+    public Result<CurrentWeatherDTO> getWeatherByCity(@PathVariable String city) {
+        return Result.success(currentWeatherService.getCurrentWeatherByCityName(city));
     }
 
 

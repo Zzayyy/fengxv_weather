@@ -15,6 +15,11 @@ spring:
 mybatis:
   mapper-locations: classpath:/mapper/*/*.xml
   config-location: classpath:/mybatis-config.xml
-
+# application.yml
+openweathermap:
+  key:
+      appid: 85a206bcf67aec117ce89505717ec31c
+      units: metric
+      lang: zh_cn
 
 

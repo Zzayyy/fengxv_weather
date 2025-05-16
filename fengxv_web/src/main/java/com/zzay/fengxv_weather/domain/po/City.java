@@ -32,6 +32,8 @@ public class City implements Serializable {
 
     private String name;
 
+    private String nameZh;
+
     private String country;
 
     private BigDecimal lon;

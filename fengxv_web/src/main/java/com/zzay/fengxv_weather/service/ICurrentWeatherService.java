@@ -1,7 +1,9 @@
 package com.zzay.fengxv_weather.service;
 
+import com.zzay.fengxv_weather.domain.dto.CurrentWeatherDTO;
 import com.zzay.fengxv_weather.domain.po.CurrentWeather;
 import com.baomidou.mybatisplus.extension.service.IService;
+import reactor.core.publisher.Mono;
 
 /**
  * <p>
@@ -13,7 +15,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface ICurrentWeatherService extends IService<CurrentWeather> {
 
-    String getCurrentWeatherByCityName(String city);
+    CurrentWeatherDTO getCurrentWeatherByCityName(String city);
 
     String getCurrentWeatherBYCityId(String cityId);
 
