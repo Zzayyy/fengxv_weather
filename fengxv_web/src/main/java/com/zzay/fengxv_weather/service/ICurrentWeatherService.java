@@ -20,4 +20,5 @@ public interface ICurrentWeatherService extends IService<CurrentWeather> {
     String getCurrentWeatherBYCityId(String cityId);
 
     String getCurrentWeatherByZIPCode(String zipCode);
+
 }

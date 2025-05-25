@@ -1,11 +1,10 @@
 package com.zzay.fengxv_weather.weatherClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.zzay.fengxv_weather.config.WeatherConfig;
+import com.zzay.fengxv_weather.config.properties.OpenWeatherMapWeatherConfig;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
@@ -14,18 +13,19 @@ import java.time.Duration;
 public class OpenWeatherMapClient  {
 
     @Autowired
+    @Qualifier("openWeatherWebClient")
     private WebClient webClient;
     @Autowired
-    private WeatherConfig weatherConfig;
+    private OpenWeatherMapWeatherConfig openWeatherMapWeatherConfig;
 
-    public String getCurrentWeatherByCityName(String city) {
+    public String getCurrentWeatherByCityNameAPI(String city) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/data/2.5/weather")
                         .queryParam("q", city)
-                        .queryParam("appid", weatherConfig.getAppid())
-                        .queryParam("units", weatherConfig.getUnits())
-                        .queryParam("lang", weatherConfig.getLang())
+                        .queryParam("appid", openWeatherMapWeatherConfig.getAppid())
+                        .queryParam("units", openWeatherMapWeatherConfig.getUnits())
+                        .queryParam("lang", openWeatherMapWeatherConfig.getLang())
                         .build())
                 .retrieve()
                 .bodyToMono(String.class)
@@ -33,28 +33,28 @@ public class OpenWeatherMapClient  {
                 .block();
     }
 
-    public String getCurrentWeatherByCityId(String cityId) {
+    public String getCurrentWeatherByCityIdAPI(String cityId) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/data/2.5/weather")
                         .queryParam("id", cityId)
-                        .queryParam("appid", weatherConfig.getAppid())
-                        .queryParam("units", weatherConfig.getUnits())
-                        .queryParam("lang", weatherConfig.getLang())
+                        .queryParam("appid", openWeatherMapWeatherConfig.getAppid())
+                        .queryParam("units", openWeatherMapWeatherConfig.getUnits())
+                        .queryParam("lang", openWeatherMapWeatherConfig.getLang())
                         .build())
                 .retrieve()
                 .bodyToMono(String.class)
                 .block(); // 注意：block() 是阻塞的，仅用于演示
     }
 
-    public String getCurrentWeatherByZIPCode(String ZIPCode) {
+    public String getCurrentWeatherByZIPCodeAPI(String ZIPCode) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/data/2.5/weather")
                         .queryParam("zip", ZIPCode)
-                        .queryParam("appid", weatherConfig.getAppid())
-                        .queryParam("units", weatherConfig.getUnits())
-                        .queryParam("lang", weatherConfig.getLang())
+                        .queryParam("appid", openWeatherMapWeatherConfig.getAppid())
+                        .queryParam("units", openWeatherMapWeatherConfig.getUnits())
+                        .queryParam("lang", openWeatherMapWeatherConfig.getLang())
                         .build())
                 .retrieve()
                 .bodyToMono(String.class)
@@ -63,18 +63,32 @@ public class OpenWeatherMapClient  {
 
 
     // 获取英文城市名（Geocoding API）
-    public String getGeocodingByCityName(String localCityName) {
+    public String getGeocodingByCityNameAPI(String localCityName) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/geo/1.0/direct")
                         .queryParam("q", localCityName)
                         .queryParam("limit", 1)
-                        .queryParam("appid", weatherConfig.getAppid())
+                        .queryParam("appid", openWeatherMapWeatherConfig.getAppid())
                         .build())
                 .retrieve()
                 .bodyToMono(String.class)
                 .timeout(Duration.ofSeconds(10))
                 .retryWhen(Retry.fixedDelay(1, Duration.ofSeconds(1)))
+                .block();
+    }
+
+    public String get3Hours5DayForecastByCityNameAPI(String cityName) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/data/2.5/forecast")
+                        .queryParam("q", cityName)
+                        .queryParam("appid", openWeatherMapWeatherConfig.getAppid())
+                        .queryParam("units", openWeatherMapWeatherConfig.getUnits())
+                        .queryParam("lang", openWeatherMapWeatherConfig.getLang())
+                        .build())
+                .retrieve()
+                .bodyToMono(String.class)
                 .block();
     }
 }

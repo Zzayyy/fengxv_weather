@@ -11,9 +11,9 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import java.time.Duration;
 
 @Configuration
-public class WebClientConfig {
+public class OpenWeatherMapWebClientConfig {
 
-    @Bean
+    @Bean("openWeatherWebClient")
     public WebClient webClient() {
         HttpClient httpClient = HttpClient.create()
                 .responseTimeout(Duration.ofSeconds(30)) // 设置响应超时

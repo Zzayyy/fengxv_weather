@@ -1,11 +1,14 @@
 package com.zzay.fengxv_weather.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zzay.fengxv_weather.domain.dto.CurrentWeatherDTO;
 import com.zzay.fengxv_weather.domain.dto.GeocodingDTO;
+import com.zzay.fengxv_weather.domain.po.AmapGeo;
 import com.zzay.fengxv_weather.service.GeocodingService;
+import com.zzay.fengxv_weather.weatherClient.AmapClient;
 import com.zzay.fengxv_weather.weatherClient.OpenWeatherMapClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -22,12 +25,14 @@ public class GeocodingServiceImpl implements GeocodingService {
     @Autowired
     private OpenWeatherMapClient openWeatherMapClient;
     @Autowired
+    private AmapClient amapClient;
+    @Autowired
     private ObjectMapper  objectMapper;
 
     @Override
     public GeocodingDTO getGeocodingByCityName(String localCityName) {
         String cacheKey = "geocoding:" + localCityName;
-        String json = getOrFetchGeocodingRedis(cacheKey, () -> openWeatherMapClient.getGeocodingByCityName(localCityName));
+        String json = getOrFetchGeocodingRedis(cacheKey, () -> openWeatherMapClient.getGeocodingByCityNameAPI(localCityName));
         try {
             // 使用 List 接收 OpenWeatherMap 的数组响应
             List<GeocodingDTO> dtos = objectMapper.readValue(json, new TypeReference<List<GeocodingDTO>>() {});
@@ -35,6 +40,13 @@ public class GeocodingServiceImpl implements GeocodingService {
             if (dtos != null && !dtos.isEmpty()) {
                 GeocodingDTO dto = dtos.get(0);
                 dto.setLocalName(localCityName);  // 设置本地城市名
+
+                String cityName = dto.getName();
+                if (cityName != null && cityName.contains(" City")) {
+                    cityName = cityName.replace(" City", "");  // 去除 " city"
+                    dto.setName(cityName);
+                }
+
                 return dto;
             } else {
                 throw new RuntimeException("未找到对应城市的英文名: " + localCityName);
@@ -44,9 +56,26 @@ public class GeocodingServiceImpl implements GeocodingService {
         }
     }
 
+    @Override
+    public AmapGeo getGeocodingByCityNameOnAmap(String localCityName) {
+        String cacheKey = "AmapGeocoding:" + localCityName;
+        String json = getOrFetchGeocodingRedis(cacheKey, () -> amapClient.getGeocoding(localCityName));
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            JsonNode geocodeNode = root.path("geocodes").get(0);
+            if (geocodeNode != null && !geocodeNode.isMissingNode()) {
+                return objectMapper.treeToValue(geocodeNode, AmapGeo.class);
+            } else {
+                return null;
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
     public String getOrFetchGeocodingRedis(String cacheKey, Supplier<String> apiCall) {
-
-
         // 1. 尝试读取缓存
         String cached = null;
         try {

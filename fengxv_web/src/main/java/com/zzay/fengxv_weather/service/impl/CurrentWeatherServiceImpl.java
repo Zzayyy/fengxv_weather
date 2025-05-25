@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zzay.fengxv_weather.domain.dto.CurrentWeatherDTO;
 import com.zzay.fengxv_weather.domain.dto.GeocodingDTO;
+import com.zzay.fengxv_weather.domain.po.AmapGeo;
 import com.zzay.fengxv_weather.domain.po.City;
 import com.zzay.fengxv_weather.domain.po.CurrentWeather;
 import com.zzay.fengxv_weather.mapper.CityMapper;
@@ -14,10 +15,14 @@ import com.zzay.fengxv_weather.service.GeocodingService;
 import com.zzay.fengxv_weather.service.ICurrentWeatherService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzay.fengxv_weather.weatherClient.OpenWeatherMapClient;
+import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -51,7 +56,7 @@ public class CurrentWeatherServiceImpl extends ServiceImpl<CurrentWeatherMapper,
         GeocodingDTO geocodingByCityName = geocodingService.getGeocodingByCityName(city);
         String englishCityName = geocodingByCityName.getName();
         String cacheKey = "weather:" + city;
-        String json = getOrFetchWeatherRedis(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByCityName(englishCityName));
+        String json = getOrFetchWeatherRedis(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByCityNameAPI(englishCityName));
         try {
             CurrentWeatherDTO currentWeatherDTO = objectMapper.readValue(json, CurrentWeatherDTO.class);
             currentWeatherDTO.setLocalName(city);
@@ -65,20 +70,22 @@ public class CurrentWeatherServiceImpl extends ServiceImpl<CurrentWeatherMapper,
     @Override
     public String getCurrentWeatherBYCityId(String cityId) {
         String cacheKey = "weather:" + cityId;
-        return getOrFetchWeatherRedis(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByCityId(cityId));
+        return getOrFetchWeatherRedis(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByCityIdAPI(cityId));
     }
 
     @Override
     public String getCurrentWeatherByZIPCode(String zipCode) {
         String cacheKey = "weather" + zipCode;
-        return getOrFetchWeatherRedis(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByZIPCode(zipCode));
+        return getOrFetchWeatherRedis(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByZIPCodeAPI(zipCode));
     }
 
 
+
+
     /**
-     * 获取城市天气并保存到数据库
+     * 获取OpenWeather城市天气并保存到数据库
      */
-    public boolean saveWeatherData(String json) {
+    public boolean saveOpenWeatherData(String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
 
@@ -172,7 +179,7 @@ public class CurrentWeatherServiceImpl extends ServiceImpl<CurrentWeatherMapper,
         }
 
         // 4. 保存数据到数据库
-        if (!saveWeatherData(result)) {
+        if (!saveOpenWeatherData(result)) {
             throw new RuntimeException("天气数据保存到数据库失败");
         }
 
@@ -186,5 +193,6 @@ public class CurrentWeatherServiceImpl extends ServiceImpl<CurrentWeatherMapper,
 
         return result;
     }
+
 
 }

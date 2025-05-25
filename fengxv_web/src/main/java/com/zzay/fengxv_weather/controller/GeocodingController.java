@@ -1,6 +1,7 @@
 package com.zzay.fengxv_weather.controller;
 
 import com.zzay.fengxv_weather.domain.dto.GeocodingDTO;
+import com.zzay.fengxv_weather.domain.po.AmapGeo;
 import com.zzay.fengxv_weather.domain.result.Result;
 import com.zzay.fengxv_weather.service.GeocodingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,8 +27,14 @@ public class GeocodingController {
     private GeocodingService geocodingService;
 
     @Operation(summary = "根据城市名获取经纬度")
-    @GetMapping("/{localCityName}")
+    @GetMapping("/openWeatherMap/{localCityName}")
     public Result<GeocodingDTO> getGeocodingByCityName(@PathVariable String localCityName) {
         return Result.success(geocodingService.getGeocodingByCityName(localCityName));
     }
+    @Operation(summary = "根据城市名获取Geo")
+    @GetMapping("/Amap/{localCityName}")
+    public Result<AmapGeo> getGeocodingOnAmap(@PathVariable String localCityName) {
+        return Result.success(geocodingService.getGeocodingByCityNameOnAmap(localCityName));
+    }
+
 }
