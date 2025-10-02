@@ -16,7 +16,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         // 允许所有来源
-        config.addAllowedOrigin("http://localhost:5173");  // Vue 开发服务器地址
+        config.addAllowedOrigin("http://localhost:8848/");  // Vue 开发服务器地址
 
         // 允许所有头部
         config.addAllowedHeader("*");

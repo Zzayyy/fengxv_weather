@@ -71,8 +71,8 @@ response = requests.get(url, headers=headers, cookies=cookies, params=params)
 # print(rise)
 
 
-match = re.search(r'\((.*?)\)', response.text).group(1)
-data = json.loads(match)
+# match = re.search(r'\((.*?)\)', response.text).group(1)
+data = json.loads(response.text)
 
 # 输出 JSON 格式的数据给 Java
 print(json.dumps({

@@ -3,6 +3,7 @@ package com.zzay.fengxv_weather.controller;
 
 import com.zzay.fengxv_weather.domain.dto.TencentWeatherForecast1HoursDTO;
 import com.zzay.fengxv_weather.domain.po.TencentWeatherForecast1h;
+import com.zzay.fengxv_weather.domain.result.Result;
 import com.zzay.fengxv_weather.service.ITencentWeatherForecast1hService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +30,8 @@ public class TencentWeatherForecast1hController {
 
     @Operation(summary = "获取腾讯天气的逐小时天气数据")
     @GetMapping("tencentWeather/{city}")
-    public TencentWeatherForecast1HoursDTO getWeatherByTencentWeather(@PathVariable String city) {
-        return tencentWeatherForecast1hService.getDataFromTencentWeather(city);
+    public Result<TencentWeatherForecast1HoursDTO> getWeatherByTencentWeather(@PathVariable String city) {
+        return Result.success(tencentWeatherForecast1hService.getDataFromTencentWeather(city));
     }
 
 
