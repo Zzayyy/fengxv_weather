@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -44,75 +45,63 @@ public class TencentWeatherForecast1hServiceImpl extends ServiceImpl<TencentWeat
     @Autowired
     private CacheUtil cacheUtil;
 
+    private final RestTemplate restTemplate = new RestTemplate();  // 用于请求 FastAPI
+
 
     @SneakyThrows
     @Override
     public TencentWeatherForecast1HoursDTO getDataFromTencentWeather(String city) {
+        // 先用高德定位
         AmapGeo geocodingByCityNameOnAmap = geocodingService.getGeocodingByCityNameOnAmap(city);
+
         String cacheKey = "weather:" + city;
+
+        // 从缓存中获取，如果没有就调用 FastAPI
         String json = cacheUtil.getOrFetchWeatherRedis(
                 cacheKey,
                 () -> {
-                    JsonNode jsonNode = null;
+                    JsonNode jsonNode;
                     try {
-                        jsonNode = callPythonScriptFor1h(geocodingByCityNameOnAmap);
-                    } catch (IOException | InterruptedException e) {
-                        throw new RuntimeException("python script 运行失败");
+                        jsonNode = callFastApiFor1h(geocodingByCityNameOnAmap);
+                    } catch (Exception e) {
+                        throw new RuntimeException("调用 FastAPI 失败", e);
                     }
-                    return jsonNode.toString(); // 返回 JSON 字符串给 Redis 和 Save 方法
+                    return jsonNode.toString(); // 缓存 JSON
                 },
                 (resultJson) -> saveTencentWeather(resultJson, geocodingByCityNameOnAmap.getProvince(), geocodingByCityNameOnAmap.getCity())
-
         );
 
-        // 封装为对象
-        // 解析为完整响应对象
+        // 解析 JSON
         JsonNode root = objectMapper.readTree(json);
         JsonNode forecast1HNode = root.path("forecast_1h");
 
-        TencentWeatherForecast1HoursDTO tencentWeatherForecast1HoursDTO = new TencentWeatherForecast1HoursDTO();
+        TencentWeatherForecast1HoursDTO dto = new TencentWeatherForecast1HoursDTO();
+        dto.setForecast1h(objectMapper.convertValue(forecast1HNode, new TypeReference<Map<String, TencentWeatherForecast1h>>() {}));
 
-        // 将 forecast_1h 映射为 Map<String, TencentWeatherForecast1h>
-        tencentWeatherForecast1HoursDTO.setForecast1h(objectMapper.convertValue(forecast1HNode, new TypeReference<Map<String, TencentWeatherForecast1h>>() {}));
-
-        return tencentWeatherForecast1HoursDTO;
-
+        return dto;
     }
 
-
-    // 执行python文件获取腾讯天气
-    public JsonNode callPythonScriptFor1h(AmapGeo amapGeo) throws IOException, InterruptedException {
-        // 构建命令行参数(配置)
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "D:\\Program Files (x86)\\Python\\Python3.11.5\\python.exe",
-                "E:\\Code_java\\fengxv_weather\\fengxv_web\\src\\main\\java\\com\\zzay\\fengxv_weather\\python\\TencentWeatherForecast1hPython.py",
+    /**
+     * 调用 FastAPI 的接口
+     */
+    public JsonNode callFastApiFor1h(AmapGeo amapGeo) throws IOException {
+        // 拼接 FastAPI 的 URL
+        String url = String.format(
+                "http://127.0.0.1:8000/weather/forecast1h?province=%s&city=%s&county=%s",
                 amapGeo.getProvince(),
-                amapGeo.getCity()
+                amapGeo.getCity(),
+                amapGeo.getDistrict()
         );
 
-        // 合并标准输出和错误输出(配置2)
-        processBuilder.redirectErrorStream(true);
+        // 调用 FastAPI
+        String response = restTemplate.getForObject(url, String.class);
 
-        Process process = processBuilder.start();
-
-        // 先读取输出流的内容
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        StringBuilder output = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            output.append(line);
+        if (response == null) {
+            throw new RuntimeException("FastAPI 返回空数据");
         }
 
-        // 然后再等待执行完成
-        int exitCode = process.waitFor();
-
-        if (exitCode != 0) {
-            throw new RuntimeException("Python script 执行失败: 退出码=" + exitCode + ", 输出=" + output);
-        }
-
-        // 解析 JSON 输出
-        return objectMapper.readTree(output.toString());
+        // 转换为 JSON
+        return objectMapper.readTree(response);
     }
 
     @SneakyThrows
@@ -130,32 +119,28 @@ public class TencentWeatherForecast1hServiceImpl extends ServiceImpl<TencentWeat
             while (fields.hasNext()) {
                 JsonNode node = fields.next().getValue();
 
-                // 构造实体对象
-                TencentWeatherForecast1h tencentWeatherForecast1h = new TencentWeatherForecast1h();
+                TencentWeatherForecast1h entity = new TencentWeatherForecast1h();
+                entity.setForecastTime(node.path("update_time").asText());
+                entity.setDegree(node.path("degree").asText());
+                entity.setWeather(node.path("weather").asText());
+                entity.setWeatherCode(node.path("weather_code").asText());
+                entity.setWeatherShort(node.path("weather_short").asText());
+                entity.setWeatherUrl(node.path("weather_url").asText());
+                entity.setWindDirection(node.path("wind_direction").asText());
+                entity.setWindPower(node.path("wind_power").asText());
+                entity.setProvince(province);
+                entity.setCity(city);
 
-                tencentWeatherForecast1h.setForecastTime(node.path("update_time").asText());
-                tencentWeatherForecast1h.setDegree(node.path("degree").asText());
-                tencentWeatherForecast1h.setWeather(node.path("weather").asText());
-                tencentWeatherForecast1h.setWeatherCode(node.path("weather_code").asText());
-                tencentWeatherForecast1h.setWeatherShort(node.path("weather_short").asText());
-                tencentWeatherForecast1h.setWeatherUrl(node.path("weather_url").asText());
-                tencentWeatherForecast1h.setWindDirection(node.path("wind_direction").asText());
-                tencentWeatherForecast1h.setWindPower(node.path("wind_power").asText());
-                tencentWeatherForecast1h.setProvince(province);
-                tencentWeatherForecast1h.setCity(city);
-
-                // 调用 Mapper 或 JPA 存储
-                this.save(tencentWeatherForecast1h); // 假设你有这个 mapper
+                this.save(entity);
             }
 
             return true;
-
         } catch (Exception e) {
-            log.error("保存数据失败: {}", e.getMessage());
+            log.error("保存数据失败: {}", e.getMessage(), e);
             return false;
         }
-
     }
+
 
 }
 
