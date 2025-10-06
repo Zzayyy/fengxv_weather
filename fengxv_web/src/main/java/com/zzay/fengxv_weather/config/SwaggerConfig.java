@@ -8,11 +8,11 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class SwaggerConfig {
-
     @Bean
     public GroupedOpenApi adminApi() {      // 创建了一个api接口的分组
         return GroupedOpenApi.builder()
                 .group("admin-api")         // 分组名称
+                .packagesToScan("com.zzay.fengxv_weather") // ←← 关键！指定根包
                 .pathsToMatch("/**")  // 接口请求路径规则
                 .build();
     }

@@ -5,6 +5,7 @@ import com.zzay.fengxv_weather.domain.dto.CurrentWeatherDTO;
 import com.zzay.fengxv_weather.domain.result.Result;
 import com.zzay.fengxv_weather.service.ICurrentWeatherService;
 import io.swagger.v3.oas.annotations.Operation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -17,6 +18,7 @@ import reactor.core.publisher.Mono;
  * @author Zzay
  * @since 2025-05-08
  */
+@Slf4j
 @RestController
 @RequestMapping("/current-weather")
 public class CurrentWeatherController {
