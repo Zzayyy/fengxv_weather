@@ -17,6 +17,6 @@ public class AmapGeo {
     private String cityCode;
     private String city;
     private String location;
-    private String district;
+    private Object district;
 
 }

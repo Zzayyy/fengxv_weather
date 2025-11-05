@@ -55,7 +55,7 @@ public class CurrentWeatherServiceImpl extends ServiceImpl<CurrentWeatherMapper,
     public CurrentWeatherDTO getCurrentWeatherByCityName(String city) {
         GeocodingDTO geocodingByCityName = geocodingService.getGeocodingByCityName(city);
         String englishCityName = geocodingByCityName.getName();
-        String cacheKey = "weather:" + city;
+        String cacheKey = "weather:" + city + ":OpenWeather今日天气";
         String json = getOrFetchWeatherRedis(cacheKey, () -> openWeatherMapClient.getCurrentWeatherByCityNameAPI(englishCityName));
         try {
             CurrentWeatherDTO currentWeatherDTO = objectMapper.readValue(json, CurrentWeatherDTO.class);

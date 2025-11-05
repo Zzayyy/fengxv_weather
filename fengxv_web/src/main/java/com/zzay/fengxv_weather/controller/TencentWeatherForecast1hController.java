@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * <p>
  *  前端控制器
@@ -30,7 +32,7 @@ public class TencentWeatherForecast1hController {
 
     @Operation(summary = "获取腾讯天气的逐小时天气数据")
     @GetMapping("tencentWeather/{city}")
-    public Result<TencentWeatherForecast1HoursDTO> getWeatherByTencentWeather(@PathVariable String city) {
+    public Result<List<TencentWeatherForecast1h>> getWeatherByTencentWeather(@PathVariable String city) {
         return Result.success(tencentWeatherForecast1hService.getDataFromTencentWeather(city));
     }
 

@@ -2,6 +2,7 @@ package com.zzay.fengxv_weather.controller;
 
 
 import com.zzay.fengxv_weather.domain.dto.WeatherLishi2025MonthlyDTO;
+import com.zzay.fengxv_weather.domain.dto.WeatherLishiDistributionCountDTO;
 import com.zzay.fengxv_weather.domain.po.WeatherLishi2025Monthly;
 import com.zzay.fengxv_weather.domain.result.Result;
 import com.zzay.fengxv_weather.service.IWeatherLishi2025MonthlyService;
@@ -34,5 +35,11 @@ public class WeatherLishi2025MonthlyController {
     @GetMapping("/temperature/nationwide")
     public Result<List<WeatherLishi2025Monthly>> getMonthlyTemperatureNationwide() {
         return Result.success(weatherLishi2025MonthlyService.getMonthlyTemperatureNationwide());
+    }
+
+    @Operation(summary = "获取全国高温天，低温天，适中天数量统计")
+    @GetMapping("/temperature/distribution")
+    public Result<WeatherLishiDistributionCountDTO> getTempDistributionCount() {
+        return Result.success(weatherLishi2025MonthlyService.getTempDistributionCount());
     }
 }

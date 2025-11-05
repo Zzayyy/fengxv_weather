@@ -9,8 +9,10 @@ import java.io.Serializable;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
@@ -25,6 +27,8 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
 @TableName("tencent_weather_forecast_24h")
+@AllArgsConstructor
+@NoArgsConstructor
 public class TencentWeatherForecast24h implements Serializable {
 
     private static final long serialVersionUID = 1L;

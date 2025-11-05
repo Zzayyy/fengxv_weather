@@ -99,7 +99,7 @@ public class GeocodingServiceImpl implements GeocodingService {
         }
         // 5. 尝试写入缓存
         try {
-            redisTemplate.opsForValue().set(cacheKey, result, Duration.ofMinutes(10));
+            redisTemplate.opsForValue().set(cacheKey, result, Duration.ofHours(24));
         } catch (Exception e) {
             // 日志：Redis 写入失败，但不影响主流程
             System.err.println("Redis 写入失败：" + e.getMessage());

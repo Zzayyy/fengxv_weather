@@ -8,8 +8,10 @@ import java.io.Serializable;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
@@ -24,6 +26,8 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
 @TableName("tencent_weather_forecast_1h")
+@NoArgsConstructor  // 👈 必须加！
+@AllArgsConstructor // 如果你需要全参构造（比如用于测试），也可以保留
 public class TencentWeatherForecast1h implements Serializable {
 
     private static final long serialVersionUID = 1L;

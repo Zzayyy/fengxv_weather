@@ -17,13 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -50,11 +51,11 @@ public class TencentWeatherForecast1hServiceImpl extends ServiceImpl<TencentWeat
 
     @SneakyThrows
     @Override
-    public TencentWeatherForecast1HoursDTO getDataFromTencentWeather(String city) {
+    public List<TencentWeatherForecast1h> getDataFromTencentWeather(String city) {
         // 先用高德定位
         AmapGeo geocodingByCityNameOnAmap = geocodingService.getGeocodingByCityNameOnAmap(city);
 
-        String cacheKey = "weather:" + city;
+        String cacheKey = "weather:" + city + ":1h";
 
         // 从缓存中获取，如果没有就调用 FastAPI
         String json = cacheUtil.getOrFetchWeatherRedis(
@@ -75,22 +76,28 @@ public class TencentWeatherForecast1hServiceImpl extends ServiceImpl<TencentWeat
         JsonNode root = objectMapper.readTree(json);
         JsonNode forecast1HNode = root.path("forecast_1h");
 
-        TencentWeatherForecast1HoursDTO dto = new TencentWeatherForecast1HoursDTO();
-        dto.setForecast1h(objectMapper.convertValue(forecast1HNode, new TypeReference<Map<String, TencentWeatherForecast1h>>() {}));
 
-        return dto;
+        // 将 Map 转为 List
+        Map<String, TencentWeatherForecast1h> map = objectMapper.convertValue(
+                forecast1HNode,
+                new TypeReference<Map<String, TencentWeatherForecast1h>>() {}
+        );
+
+        return new ArrayList<>(map.values());
     }
 
     /**
      * 调用 FastAPI 的接口
      */
     public JsonNode callFastApiFor1h(AmapGeo amapGeo) throws IOException {
+
+        Object county = Optional.ofNullable(amapGeo.getDistrict()).orElse(""); // 注意：现在是 getDistrict()
         // 拼接 FastAPI 的 URL
         String url = String.format(
                 "http://127.0.0.1:8000/weather/forecast1h?province=%s&city=%s&county=%s",
                 amapGeo.getProvince(),
                 amapGeo.getCity(),
-                amapGeo.getDistrict()
+                county
         );
 
         // 调用 FastAPI

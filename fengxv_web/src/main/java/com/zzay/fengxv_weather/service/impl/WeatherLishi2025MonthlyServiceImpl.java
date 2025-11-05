@@ -1,6 +1,7 @@
 package com.zzay.fengxv_weather.service.impl;
 
 import com.zzay.fengxv_weather.domain.dto.WeatherLishi2025MonthlyDTO;
+import com.zzay.fengxv_weather.domain.dto.WeatherLishiDistributionCountDTO;
 import com.zzay.fengxv_weather.domain.po.WeatherLishi2025Monthly;
 import com.zzay.fengxv_weather.mapper.WeatherLishi2025MonthlyMapper;
 import com.zzay.fengxv_weather.service.IWeatherLishi2025MonthlyService;
@@ -14,9 +15,12 @@ import org.apache.spark.sql.types.DataTypes;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +50,9 @@ public class WeatherLishi2025MonthlyServiceImpl extends ServiceImpl<WeatherLishi
 
     @Autowired
     private WeatherLishi2025MonthlyMapper monthlyMapper;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
     // 锁：防止并发重复计算
     private final Map<String, Object> computeLocks = new ConcurrentHashMap<>();
@@ -83,6 +90,46 @@ public class WeatherLishi2025MonthlyServiceImpl extends ServiceImpl<WeatherLishi
 
             return results;
         }
+    }
+
+    @Override
+    public WeatherLishiDistributionCountDTO getTempDistributionCount() {
+        String TEMP_DISTRIBUTION_CACHE_KEY = "weather:temp_distribution_count";
+        // 1. 尝试从 Redis 获取缓存
+        Object cached = redisTemplate.opsForValue().get(TEMP_DISTRIBUTION_CACHE_KEY);
+        if (cached != null && cached instanceof WeatherLishiDistributionCountDTO) {
+            return (WeatherLishiDistributionCountDTO) cached;
+        }
+
+        // 2. 缓存未命中，执行分析
+        Dataset<Row> weatherDF = readWeatherTable();
+        weatherDF.createOrReplaceTempView("weather");
+
+        String sql = """
+        SELECT
+            COUNT(CASE WHEN (max_temp + min_temp) / 2.0 >= 30 THEN 1 END) AS high_temp_count,
+            COUNT(CASE WHEN (max_temp + min_temp) / 2.0 <= 0 THEN 1 END) AS low_temp_count,
+            COUNT(CASE WHEN (max_temp + min_temp) / 2.0 BETWEEN 15 AND 25 THEN 1 END) AS comfortable_temp_count,
+            MAX(max_temp) AS highest_temp,
+            MIN(min_temp) AS lowest_temp
+        FROM weather
+        WHERE max_temp IS NOT NULL AND min_temp IS NOT NULL
+        """;
+
+        Dataset<Row> resultDF = sparkSession.sql(sql);
+        Row row = resultDF.first();
+
+        WeatherLishiDistributionCountDTO dto = new WeatherLishiDistributionCountDTO();
+        dto.setHighTempWeatherCount(String.valueOf(row.getLong(0)));
+        dto.setLowTempWeatherCount(String.valueOf(row.getLong(1)));
+        dto.setComfortableTempWeatherCount(String.valueOf(row.getLong(2)));
+        dto.setHighestWeather(row.get(3) != null ? row.get(3).toString() : "N/A");
+        dto.setLowestWeather(row.get(4) != null ? row.get(4).toString() : "N/A");
+
+        // 3. 写入 Redis 缓存（带过期时间）
+        redisTemplate.opsForValue().set(TEMP_DISTRIBUTION_CACHE_KEY, dto, Duration.ofHours(24));
+
+        return dto;
     }
 
     // =============== 核心逻辑 ===============

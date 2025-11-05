@@ -16,12 +16,13 @@ import com.zzay.fengxv_weather.utils.CacheUtil;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,12 +41,13 @@ public class TencentWeatherForecast24hServiceImpl extends ServiceImpl<TencentWea
     private ObjectMapper objectMapper;
     @Autowired
     private CacheUtil cacheUtil;
+    private final RestTemplate restTemplate = new RestTemplate();  // 用于请求 FastAPI
 
     @SneakyThrows
     @Override
-    public TencentWeatherForecast24HoursDTO getDataFromTencentWeather24h(String city) {
+    public List<TencentWeatherForecast24h> getDataFromTencentWeather24h(String city) {
         AmapGeo geocodingByCityNameOnAmap = geocodingService.getGeocodingByCityNameOnAmap(city);
-        String cacheKey = "weather:" + city;
+        String cacheKey = "weather:" + city + ":24h";
         String json = cacheUtil.getOrFetchWeatherRedis(
                 cacheKey,
                 () -> {
@@ -64,12 +66,15 @@ public class TencentWeatherForecast24hServiceImpl extends ServiceImpl<TencentWea
         JsonNode root = objectMapper.readTree(json);
         JsonNode forecast24HNode = root.path("forecast_24h");
 
-        TencentWeatherForecast24HoursDTO tencentWeatherForecast24HoursDTO= new TencentWeatherForecast24HoursDTO();
+//        TencentWeatherForecast24HoursDTO tencentWeatherForecast24HoursDTO= new TencentWeatherForecast24HoursDTO();
 
-        // 将 forecast_1h 映射为 Map<String, TencentWeatherForecast1h>
-        tencentWeatherForecast24HoursDTO.setForecast24h(objectMapper.convertValue(forecast24HNode, new TypeReference<Map<String, TencentWeatherForecast24h>>() {}));
+        // 将 Map 转为 List
+        Map<String, TencentWeatherForecast24h> map = objectMapper.convertValue(
+                forecast24HNode,
+                new TypeReference<Map<String, TencentWeatherForecast24h>>() {}
+        );
 
-        return tencentWeatherForecast24HoursDTO;
+        return new ArrayList<>(map.values());
     }
 
     @SneakyThrows
@@ -140,36 +145,22 @@ public class TencentWeatherForecast24hServiceImpl extends ServiceImpl<TencentWea
 
     @SneakyThrows
     private JsonNode callPythonScriptFor24h(AmapGeo geocodingByCityNameOnAmap) {
-        // 构建命令行参数(配置)
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "D:\\Program Files (x86)\\Python\\Python3.11.5\\python.exe",
-                "E:\\Code_java\\fengxv_weather\\fengxv_web\\src\\main\\java\\com\\zzay\\fengxv_weather\\python\\TencentWeatherForecast24hPython.py",
+        // 拼接 FastAPI 的 URL
+        String url = String.format(
+                "http://127.0.0.1:8000/weather/forecast24h?province=%s&city=%s&county=%s",
                 geocodingByCityNameOnAmap.getProvince(),
-                geocodingByCityNameOnAmap.getCity()
+                geocodingByCityNameOnAmap.getCity(),
+                geocodingByCityNameOnAmap.getDistrict()
         );
 
-        // 合并标准输出和错误输出(配置2)
-        processBuilder.redirectErrorStream(true);
+        // 调用 FastAPI
+        String response = restTemplate.getForObject(url, String.class);
 
-        Process process = processBuilder.start();
-
-        // 先读取输出流的内容
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        StringBuilder output = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            output.append(line);
+        if (response == null) {
+            throw new RuntimeException("FastAPI 返回空数据");
         }
 
-        // 然后再等待执行完成
-        int exitCode = process.waitFor();
-
-        if (exitCode != 0) {
-            throw new RuntimeException("Python script 执行失败: 退出码=" + exitCode + ", 输出=" + output);
-        }
-
-        // 解析 JSON 输出
-        return objectMapper.readTree(output.toString());
+        // 转换为 JSON
+        return objectMapper.readTree(response);
     }
 }

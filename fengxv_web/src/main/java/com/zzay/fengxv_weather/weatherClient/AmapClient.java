@@ -26,4 +26,17 @@ public class AmapClient {
                 .block();
     }
 
+    public String getWeatherAmap(String data) {
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("v3/weather/weatherInfo")
+                        .queryParam("city", data)
+                        .queryParam("key", "68804100d724401022c6ac53586a382d")
+                        .build())
+                .retrieve()
+                .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(10)) // 超过 10 秒则抛出 TimeoutException
+                .block();
+    }
+
 }

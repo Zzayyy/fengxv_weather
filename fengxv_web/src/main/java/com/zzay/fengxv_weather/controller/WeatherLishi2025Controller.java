@@ -29,7 +29,7 @@ public class WeatherLishi2025Controller {
     @Autowired
     private IWeatherLishi2025Service weatherLishi2025Service;
 
-    @Operation(summary = "还行吗使用 Spark 分析2025年月度天气数据 - 按城市")
+    @Operation(summary = "使用 Spark 分析2025年月度天气数据 - 按城市")
     @GetMapping("/spark/analyze/{city}")
     public Result<WeatherLishiAnalysisDTO> analyzeWeatherWithSparkByCity(@PathVariable String city) {
         return Result.success(weatherLishi2025Service.analyzeWeatherByCity(city));

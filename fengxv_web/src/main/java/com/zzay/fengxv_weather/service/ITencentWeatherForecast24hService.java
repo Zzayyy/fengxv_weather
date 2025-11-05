@@ -5,6 +5,8 @@ import com.zzay.fengxv_weather.domain.dto.TencentWeatherForecast24HoursDTO;
 import com.zzay.fengxv_weather.domain.po.TencentWeatherForecast24h;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
+
 /**
  * <p>
  *  服务类
@@ -15,5 +17,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface ITencentWeatherForecast24hService extends IService<TencentWeatherForecast24h> {
 
-    TencentWeatherForecast24HoursDTO getDataFromTencentWeather24h(String city);
+    List<TencentWeatherForecast24h> getDataFromTencentWeather24h(String city);
 }
